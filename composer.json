@@ -1,0 +1,25 @@
+{
+    "name": "djeventplannerhub/djep-php-sdk",
+    "description": "Official PHP SDK for the DJ Event Planner (DJEP) REST API",
+    "type": "library",
+    "license": "MIT",
+    "minimum-stability": "stable",
+    "require": {
+        "php": ">=7.4",
+        "ext-curl": "*",
+        "ext-json": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "DJEP\\": "src/"
+        }
+    },
+    "homepage": "https://github.com/djeventplannerhub/djep-php-sdk",
+    "authors": [
+        {
+            "name": "DJ Event Planner",
+            "homepage": "https://www.djeventplanner.com"
+        }
+    ],
+    "keywords": ["djep", "dj", "event", "planner", "api", "sdk"]
+}
