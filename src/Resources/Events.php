@@ -149,4 +149,46 @@ class Events extends Resource
         $notes['eventid'] = $eventid;
         return $this->http->post('update_notes', $notes);
     }
+
+    /**
+     * Set which systems are assigned to an event.
+     *
+     * @param int   $eventid
+     * @param array $systemids  System IDs. Pass an empty array to clear.
+     *
+     * This REPLACES the whole list. Send every system you want on the event,
+     * not just the additions. Maximum of 10.
+     */
+    public function assignSystems(int $eventid, array $systemids): object
+    {
+        return $this->http->post('assign_event_systems', [
+            'eventid' => $eventid,
+            'systems' => implode(',', $systemids),
+        ]);
+    }
+
+    /**
+     * Set which standalone equipment is assigned to an event.
+     *
+     * @param int   $eventid
+     * @param array $equipment  Either a flat list of ids, or equipmentid => qty.
+     *                          Pass an empty array to clear.
+     *
+     * This REPLACES the whole list, the same as assignSystems().
+     */
+    public function assignEquipment(int $eventid, array $equipment): object
+    {
+        // A list is [318, 412]; a quantity map is [318 => 2, 412 => 1]. PHP casts
+        // numeric string keys to integers, so is_int() cannot tell the two apart.
+        // Compare the keys against a plain 0..n sequence instead.
+        $isList = array_keys($equipment) === range(0, count($equipment) - 1);
+        $parts = [];
+        foreach ($equipment as $key => $value) {
+            $parts[] = $isList ? (string) $value : "{$key}={$value}";
+        }
+        return $this->http->post('assign_event_equipment', [
+            'eventid'   => $eventid,
+            'equipment' => implode(',', $parts),
+        ]);
+    }
 }

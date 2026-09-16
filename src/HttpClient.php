@@ -5,6 +5,7 @@ use DJEP\Exceptions\DJEPException;
 use DJEP\Exceptions\AuthenticationException;
 use DJEP\Exceptions\NotFoundException;
 use DJEP\Exceptions\ValidationException;
+use DJEP\Exceptions\ConflictException;
 use DJEP\Exceptions\RateLimitException;
 use DJEP\Exceptions\ForbiddenException;
 
@@ -91,6 +92,11 @@ class HttpClient
             $code = $response->error->code ?? $httpCode;
 
             switch ($httpCode) {
+                case 409:
+                    // The API returns context alongside a 409, such as the
+                    // addonid of the record that already exists. Pass the whole
+                    // error object through so the caller can use it.
+                    throw new ConflictException($message, $code, $response->error ?? null);
                 case 401:
                     throw new AuthenticationException($message, $code);
                 case 403:

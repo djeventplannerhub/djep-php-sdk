@@ -28,4 +28,18 @@ class Settings extends Resource
     {
         return $this->http->get('settings', ['type' => 'custom_fields']);
     }
+
+    /**
+     * Get the account's picklists: event types, event statuses, booked
+     * statuses, inquiry sources, client types, payment methods, employee roles
+     * and music request types, plus the currency symbol, tax rate and date
+     * format.
+     *
+     * Read this rather than hardcoding values. Statuses in particular are
+     * validated on write and differ from account to account.
+     */
+    public function lists(): object
+    {
+        return $this->http->get('settings', ['type' => 'lists']);
+    }
 }
