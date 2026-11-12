@@ -52,4 +52,44 @@ class EventPlanning extends Resource
         }
         return $this->http->post('update_event_planning', $data);
     }
+
+    /**
+     * Replace one of an event's two timelines.
+     *
+     * @param int    $eventid
+     * @param array  $activities  Rows in running order, each with any of
+     *                            'time', 'name' and 'comments'. Up to 52 are
+     *                            stored; anything past that is dropped. Pass an
+     *                            empty array to clear the timeline.
+     * @param string $headline    Text shown above the activities.
+     * @param int    $slot        1 for the timeline, 2 for the second timeline.
+     *
+     * This REPLACES the whole timeline, so send every activity you want kept.
+     * Clearing it removes the headline too, because a timeline with a headline
+     * and no activities reads back as one blank activity.
+     *
+     *     $djep->planning->updateTimeline(252318, [
+     *         ['time' => '6:00 PM', 'name' => 'Guests arrive'],
+     *         ['time' => '7:30 PM', 'name' => 'First dance', 'comments' => 'Dim the lights'],
+     *     ], 'Reception running order');
+     */
+    public function updateTimeline(int $eventid, array $activities, string $headline = '', int $slot = 1): object
+    {
+        $data = [
+            'eventid'  => $eventid,
+            'slot'     => $slot,
+            'headline' => $headline,
+        ];
+        $i = 1;
+        foreach ($activities as $activity) {
+            if ($i > 52) {
+                break;
+            }
+            $data["activity_{$i}_time"]     = $activity['time'] ?? '';
+            $data["activity_{$i}_name"]     = $activity['name'] ?? '';
+            $data["activity_{$i}_comments"] = $activity['comments'] ?? '';
+            $i++;
+        }
+        return $this->http->post('update_timeline', $data);
+    }
 }

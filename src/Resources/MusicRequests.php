@@ -33,4 +33,28 @@ class MusicRequests extends Resource
         }
         return $this->http->post('add_music_request', $data);
     }
+
+    /**
+     * Update a music request. Only the fields you pass are written.
+     *
+     * @param int   $requestId  The r_id from forEvent()
+     * @param array $fields     Any of song, artist, type, comments, location,
+     *                          status. An invalid type is refused before
+     *                          anything is written.
+     */
+    public function update(int $requestId, array $fields): object
+    {
+        $data = $fields;
+        $data['r_id'] = $requestId;
+        $data['fields'] = implode(',', array_keys($fields));
+        return $this->http->post('update_music_request', $data);
+    }
+
+    /**
+     * Remove a music request from its event. This cannot be undone.
+     */
+    public function delete(int $requestId): object
+    {
+        return $this->http->post('delete_music_request', ['r_id' => $requestId]);
+    }
 }

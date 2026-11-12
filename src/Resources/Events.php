@@ -191,4 +191,110 @@ class Events extends Resource
             'equipment' => implode(',', $parts),
         ]);
     }
+
+    /**
+     * Check an employee in to an event.
+     *
+     * @param int   $eventid
+     * @param int   $employeeid  Leave at 0 for the key's own employee. A master
+     *                           admin key has no employee of its own, so it has
+     *                           to name one. Checking anybody else in needs
+     *                           administrator, master admin or salesperson
+     *                           access.
+     * @param array $options     latitude and longitude, stored as the location
+     *                           the check in happened at.
+     *
+     * One way only, the same as the buttons in the web app: check in once, then
+     * check out once. A second check in returns 409.
+     *
+     * The response carries notification_status rather than just a flag, because
+     * the office email can be switched off, have no recipient, or be blocked by
+     * the server. Read that, not notification_sent, if you need to know what
+     * actually happened.
+     */
+    public function checkIn(int $eventid, int $employeeid = 0, array $options = []): object
+    {
+        return $this->http->post('check_in', $this->checkInPayload($eventid, $employeeid, $options));
+    }
+
+    /**
+     * Check an employee out of an event. Same arguments as checkIn().
+     *
+     * Checking out before checking in returns 400, and checking out twice
+     * returns 409.
+     */
+    public function checkOut(int $eventid, int $employeeid = 0, array $options = []): object
+    {
+        return $this->http->post('check_out', $this->checkInPayload($eventid, $employeeid, $options));
+    }
+
+    private function checkInPayload(int $eventid, int $employeeid, array $options): array
+    {
+        $data = $options;
+        $data['eventid'] = $eventid;
+        if ($employeeid > 0) {
+            $data['djemployeeid'] = $employeeid;
+        }
+        return $data;
+    }
+
+    /**
+     * Confirm an employee's assignment to an event.
+     *
+     * @param int    $eventid
+     * @param int    $employeeid   Leave at 0 for the key's own employee.
+     * @param string $respondedAt  When the answer was actually given, e.g.
+     *                             '2026-06-13 14:02'. Only honoured when the
+     *                             employee is answering for themselves, which
+     *                             is the point of a confirmation link collected
+     *                             now and sent on later. Cannot be in the
+     *                             future.
+     *
+     * An employee answering for themselves is recorded as C. An administrator,
+     * master admin or salesperson confirming for someone else is recorded as A,
+     * which is what the web app stores. Check recorded_as on the response to
+     * see which it was.
+     *
+     * An assignment can only be answered once; a second answer returns 409.
+     */
+    public function confirmAssignment(int $eventid, int $employeeid = 0, string $respondedAt = ''): object
+    {
+        return $this->http->post('confirm_assignment',
+            $this->assignmentPayload($eventid, $employeeid, 'confirmed', '', $respondedAt));
+    }
+
+    /**
+     * Decline an employee's assignment to an event.
+     *
+     * @param string $reason  Stored against the event. Some accounts require
+     *                        one, and the API returns 400 if it is missing.
+     *
+     * Only the employee the assignment belongs to can decline it. DJEP has no
+     * way for an administrator to decline on somebody's behalf, so naming
+     * another employee here returns 400 rather than quietly recording it.
+     *
+     * Where the account nominates a standby employee, the response reports them
+     * as reassign_to_employee. Nothing is reassigned for you, so an integration
+     * never hands out work as a side effect of recording an answer.
+     */
+    public function declineAssignment(int $eventid, string $reason = '', int $employeeid = 0, string $respondedAt = ''): object
+    {
+        return $this->http->post('confirm_assignment',
+            $this->assignmentPayload($eventid, $employeeid, 'declined', $reason, $respondedAt));
+    }
+
+    private function assignmentPayload(int $eventid, int $employeeid, string $status, string $reason, string $respondedAt): array
+    {
+        $data = ['eventid' => $eventid, 'status' => $status];
+        if ($employeeid > 0) {
+            $data['djemployeeid'] = $employeeid;
+        }
+        if (strlen($reason) > 0) {
+            $data['reason'] = $reason;
+        }
+        if (strlen($respondedAt) > 0) {
+            $data['responded_at'] = $respondedAt;
+        }
+        return $data;
+    }
 }

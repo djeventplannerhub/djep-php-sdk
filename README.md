@@ -134,15 +134,48 @@ $addons = $djep->addons->list();
 $contacts = $djep->contacts->list();
 ```
 
+### Contacts
+
+```php
+$contacts = $djep->contacts->list();
+$contact = $djep->contacts->get(1016);
+
+// Create a contact. At least one of first_name, last_name or company.
+$djep->contacts->create([
+    'first_name'     => 'Ada',
+    'last_name'      => 'Lovelace',
+    'company'        => 'Analytical Engines',
+    'email_address'  => 'ada@example.com',
+    'business_phone' => '555 0100',
+]);
+
+// Update one. Only the fields you pass are written.
+$djep->contacts->update(1016, ['job_title' => 'Head of Catering']);
+```
+
+Creating and editing contacts is for administrators, master admins and
+salespeople. An employee with "Add Vendors To Events" can attach an existing
+vendor to an event, but cannot create the record itself.
+
 ### Vendors
 
 ```php
 $vendors = $djep->vendors->list();
 $vendor = $djep->vendors->get(3456);
 
+// Create a vendor. Same fields as a contact, marked as a vendor for you.
+$djep->vendors->create(['company' => 'Big Lights Co', 'business_phone' => '555 0199']);
+
+// Update one
+$djep->vendors->update(3456, ['notes' => 'Preferred supplier']);
+
 // Link a vendor to an event
 $djep->vendors->linkToEvent(56789, 3456);
 ```
+
+`vendors->update()` only reaches contacts already marked as vendors. A general
+contact returns `404` here even though it exists, so use `contacts->update()`
+for those.
 
 ### Payments
 
@@ -167,7 +200,73 @@ $songs = $djep->musicRequests->forEvent(56789);
 // Add a music request
 $djep->musicRequests->add(56789, 'Queen', 'Bohemian Rhapsody', 'MPL');
 $djep->musicRequests->add(56789, 'ABBA', 'Dancing Queen', 'DED', 'For the bride');
+
+// Update one. Only the fields you pass are written.
+$djep->musicRequests->update(88, ['type' => 'DNP', 'comments' => 'Bride asked us to drop this']);
+
+// Remove one. This cannot be undone.
+$djep->musicRequests->delete(88);
 ```
+
+### Timelines
+
+```php
+// Replace the running order. Send every activity you want kept.
+$djep->planning->updateTimeline(56789, [
+    ['time' => '6:00 PM', 'name' => 'Guests arrive'],
+    ['time' => '7:00 PM', 'name' => 'Speeches',    'comments' => 'Three, ten minutes each'],
+    ['time' => '7:30 PM', 'name' => 'First dance', 'comments' => 'Dim the lights'],
+], 'Reception running order');
+
+// Second timeline
+$djep->planning->updateTimeline(56789, $activities, 'Ceremony', 2);
+
+// Clear a timeline
+$djep->planning->updateTimeline(56789, []);
+```
+
+Up to 52 activities are stored. This replaces the whole timeline rather than
+appending, and clearing it removes the headline too.
+
+### Check In And Check Out
+
+```php
+// Check yourself in, with the location
+$djep->events->checkIn(56789, 0, ['latitude' => '50.7989', 'longitude' => '-1.0912']);
+
+// An administrator checking somebody else in
+$djep->events->checkIn(56789, 19842);
+
+$djep->events->checkOut(56789);
+```
+
+One way only, the same as the buttons in the web app. A second check in returns
+`409`, and checking out before checking in returns `400`.
+
+Read `notification_status` on the response rather than `notification_sent`: the
+office email can be switched off, have no recipient, or be blocked by the
+server, and the status says which.
+
+### Event Confirmations
+
+```php
+// An employee confirming their own assignment (recorded as C)
+$djep->events->confirmAssignment(56789);
+
+// An administrator confirming for somebody (recorded as A)
+$djep->events->confirmAssignment(56789, 19842);
+
+// A reply collected earlier and sent on later
+$djep->events->confirmAssignment(56789, 0, '2026-06-13 14:02');
+
+// Declining, which only the employee themselves can do
+$result = $djep->events->declineAssignment(56789, 'Double booked');
+echo $result->data->reassign_to_employee;  // standby employee, or null
+```
+
+An assignment can only be answered once; a second answer returns `409`. Where
+the account nominates a standby employee a decline reports them, but nothing is
+reassigned for you.
 
 ### Booking Helpers
 
